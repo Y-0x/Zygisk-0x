@@ -976,16 +976,32 @@ static bool prepare_environment() {
   while (fgets(line, sizeof(line), orig_prop) != NULL) {
     if (strncmp(line, "description=", strlen("description=")) == 0) {
       size_t pre_rem = sizeof(pre_section) - strlen(pre_section) - 1;
+      if (strlen("description=") > pre_rem)
+        LOGW("pre_section truncated, module.prop too long");
       strncat(pre_section, "description=", pre_rem);
-      size_t post_rem = sizeof(post_section) - strlen(post_section) - 1;
-      strncat(post_section, line + strlen("description="), post_rem);
-      after_description = true;
 
+      const char *desc_value = line + strlen("description=");
+      size_t post_rem = sizeof(post_section) - strlen(post_section) - 1;
+      if (strlen(desc_value) > post_rem)
+        LOGW("post_section truncated, module.prop too long");
+      strncat(post_section, desc_value, post_rem);
+
+      after_description = true;
       continue;
     }
 
-    if (after_description) strcat(post_section, line);
-    else strcat(pre_section, line);
+    if (after_description) {
+      size_t rem = sizeof(post_section) - strlen(post_section) - 1;
+      if (strlen(line) > rem)
+        LOGW("post_section truncated, module.prop too long");
+      strncat(post_section, line, rem);
+    }
+    else {
+      size_t rem = sizeof(pre_section) - strlen(pre_section) - 1;
+      if (strlen(line) > rem)
+        LOGW("pre_section truncated, module.prop too long");
+      strncat(pre_section, line, rem);
+    }
   }
 
   fclose(orig_prop);
